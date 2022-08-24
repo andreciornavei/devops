@@ -11,6 +11,12 @@
 
 ## 2 - Setup Server + Cloud Services (Terraform)
 
+### 2.2 - Apontamento dos serviços
+* 1 - Após subir as maquinas na cloud, deve-se obter o IP público das mesmas;
+* 2 - Deve-se criar um DNS wildcard para receber o trafego de todos os serviços da empresa
+* 3 - Utilizar o pattern para o registro: RECORD = `*.services.mydomain.com.br` `A` `ip-da-maquina`
+* 4 - Devese apontar o wilrdcard para TODOS os IPs do cluster;
+
 ---
 
 ## 3 - Setup Kubernetes
@@ -44,6 +50,25 @@ helm install \
 ### 3.7 - Check cert-manager deployment
 ```bash
 $ kubectl get pods --namespace cert-manager
+```
+
+### 3.8 - Traefik
+#### 3.8.1 - Controle de permissão do traefik
+```bash
+$ kubectl apply -f ./kubernetes/templates/traefik-rbac.yaml
+```
+#### 3.8.2 - Deployment do traefik
+```bash
+$ kubectl apply -f ./kubernetes/templates/traefik-ds.yaml
+```
+#### 3.8.2 - List pods to check if traefik ingress roles was created
+```bash
+$ kubectl get pods -n kube-system
+```
+
+#### 3.8.2 - Config the domain DNS to view traefik interface
+```bash
+$ kubectl apply -f ./kubernetes/templates/traefik-ui.yaml
 ```
 
 ---
