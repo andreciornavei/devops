@@ -1,0 +1,27 @@
+variables:
+  DOCKER_TLS_CERTDIR: ""
+  
+stages:
+  - build
+
+# ***************************************** #
+# The following stages will build docker    #
+# image and push to aws ecr                 #
+# ***************************************** #
+build:
+  stage: build
+  image: docker:stable
+  services:
+    - docker:19.03-dind
+  before_script:
+    # install aws from python
+    - apk add --update --no-cache python3 py3-pip && pip3 install --upgrade pip && pip install --no-cache-dir --upgrade awscli
+  script:
+    # run deploy application script
+    - sh ./scripts/deploy.sh $AWS_ACCESS_KEY_ID $AWS_SECRET_ACCESS_KEY $AWS_DEFAULT_REGION
+  after_script: 
+    # terminate all aws ec2 instances
+    # to be re-created with updated images
+    - sh ./scripts/restart_ec2_instances.sh
+  only:
+    - main

@@ -1,0 +1,11 @@
+variable "environment" {}
+variable "region" {}
+variable "domain" {}
+variable "projectname" {}
+variable "tagname" {}
+variable "database_username" {}
+variable "database_password" {}
+variable "uid" {}
+variable "ses_email_from" {}
+variable "rds_instance_class" {}
+variable "ec2_instance_class" {}

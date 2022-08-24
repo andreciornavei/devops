@@ -1,0 +1,78 @@
+#!/bin/bash -ex
+
+# Running Amazon Linux 2 AMI
+
+# add aws package
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+
+# upgrade yum
+sudo yum upgrade -y
+
+# install unzip to extract aws folder
+sudo yum install unzip -y
+
+# unzip aws cli file
+unzip awscliv2.zip
+
+# instal aws cli
+sudo ./aws/install
+
+
+# define cluster name
+# and add it to ecs config
+# echo ECS_CLUSTER=cluster-${app_tagname} >> /etc/ecs/ecs.config;
+
+# PULL DOCKER IMAGE
+
+## DEFINE ENVIRONMENT VARIABLES
+DOCKER_REPOSITORY_NAME=server-${app_tagname}
+
+## ADD ACCOUNT ID TO VARIABLE
+aws_account_id=$(aws sts get-caller-identity --query "Account" --output text)
+
+## *************************************************************************** ##
+## -------------------------------> ATTENTION <------------------------------- ##
+## *************************************************************************** ##
+## CONNECT TO ECR REPOSITORY
+## DOES IT IS NECESSARY TO RUN INSIDE AN EC2-INSTANCE?
+## - once this command is called from an ec2-instance, the instance already have permission
+## - to access ECR by IAM-ROLE attached to it.
+## + If erc get-login-password needs AWS credentials, it will failure because at this moment
+## + the instance does not have credentials, only permission to access ECR.
+## **************************************************************************** ##
+## --> SHOULD BE MADE A LOGIN TEST FROM EC2-SSH TO CHECK IF IT IS POSSIBLE. <-- ##
+## **************************************************************************** ##
+aws ecr get-login-password --region ${aws_region} | docker login --username AWS --password-stdin ${aws_account_id}.dkr.ecr.${aws_region}.amazonaws.com
+
+## PULL IMAGE FROM EC2 REPOSITORY
+docker pull ${aws_account_id}.dkr.ecr.${aws_region}.amazonaws.com/$DOCKER_REPOSITORY_NAME:latest
+
+## RUN DOCKER IMAGE
+docker run -d --name $DOCKER_REPOSITORY_NAME \
+-e NODE_ENV=$(aws ssm get-parameter --name "appenv_node_env" --query 'Parameter.Value' --output text --region ${aws_region}) \
+-e DB_HOST=$(aws ssm get-parameter --name "appenv_db_host" --query 'Parameter.Value' --output text --region ${aws_region}) \
+-e DB_PORT=$(aws ssm get-parameter --name "appenv_db_port" --query 'Parameter.Value' --output text --region ${aws_region}) \
+-e DB_NAME=$(aws ssm get-parameter --name "appenv_db_name" --query 'Parameter.Value' --output text --region ${aws_region}) \
+-e DB_USER=$(aws ssm get-parameter --name "appenv_db_user" --query 'Parameter.Value' --output text --region ${aws_region}) \
+-e DB_PASS=$(aws ssm get-parameter --name "appenv_db_pass" --query 'Parameter.Value' --output text --region ${aws_region}) \
+-e DB_SSL=$(aws ssm get-parameter --name "appenv_db_ssl" --query 'Parameter.Value' --output text --region ${aws_region}) \
+-e STORAGE_PROVIDER=$(aws ssm get-parameter --name "appenv_storage_provider" --query 'Parameter.Value' --output text --region ${aws_region}) \
+-e STORAGE_ENDPOINT=$(aws ssm get-parameter --name "appenv_storage_endpoint" --query 'Parameter.Value' --output text --region ${aws_region}) \
+-e STORAGE_BUCKET=$(aws ssm get-parameter --name "appenv_storage_bucket" --query 'Parameter.Value' --output text --region ${aws_region}) \
+-e STORAGE_REGION=$(aws ssm get-parameter --name "appenv_storage_region" --query 'Parameter.Value' --output text --region ${aws_region}) \
+-e STORAGE_ACCESS_KEY=$(aws ssm get-parameter --name "appenv_storage_access_key" --query 'Parameter.Value' --output text --region ${aws_region}) \
+-e STORAGE_SECRET_KEY=$(aws ssm get-parameter --name "appenv_storage_secret_key" --query 'Parameter.Value' --output text --region ${aws_region}) \
+-e MAIL_PROVIDER=$(aws ssm get-parameter --name "appenv_ses_provider" --query 'Parameter.Value' --output text --region ${aws_region}) \
+-e MAIL_USERNAME=$(aws ssm get-parameter --name "appenv_ses_access_key" --query 'Parameter.Value' --output text --region ${aws_region}) \
+-e MAIL_PASSWORD=$(aws ssm get-parameter --name "appenv_ses_secret_key" --query 'Parameter.Value' --output text --region ${aws_region}) \
+-e MAIL_DEFAULT_FROM=$(aws ssm get-parameter --name "appenv_ses_email_from" --query 'Parameter.Value' --output text --region ${aws_region}) \
+-e MAIL_REGION=${aws_region} \
+-e MAIL_DEFAULT_REPLY_TO= \
+-e ASAAS_API_URL=https://www.asaas.com/api/v3 \
+-e ASAAS_API_KEY=8046ef38876f5dab534b0c94591c8049dc69613b2e96ce1772a2d7fc4ae0d0bc \
+-e ASAAS_API_POSTBACK=https://serv.torosports.app/subscriptions/webhook \
+-e ASAAS_API_POSTBACK_TOKEN=3A229024A88170DB218A835CE4CE3167A4A45810 \
+-e ASAAS_API_POSTBACK_EMAIL_ERROR=admtorosports@gmail.com \
+-p 80:1337 \
+--restart always \
+${aws_account_id}.dkr.ecr.${aws_region}.amazonaws.com/$DOCKER_REPOSITORY_NAME:latest

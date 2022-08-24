@@ -1,0 +1,94 @@
+include:
+  - template: Terraform/Base.gitlab-ci.yml
+
+variables:
+  DOCKER_TLS_CERTDIR: ""
+  TF_STATE_NAME: default
+  TF_CACHE_KEY: default
+  TF_ROOT: terraform/environments/production
+  TF_VAR_app_id: "a744dd68a63911ecb9090242ac120002"
+  TF_VAR_region: "sa-east-1"
+  TF_VAR_domain: "torosports.app"
+  TF_VAR_email_from: "noreply@torosports.app"
+  TF_VAR_tag_name: "torosports"
+  TF_VAR_project_name: "Toro Sports"
+  TF_VAR_rds_instance_class: "db.t3.medium"
+  TF_VAR_ec2_instance_class: "t2.medium"
+  
+stages:
+  - init
+  - validate
+  - build
+  - deploy
+  - prod-app-build
+
+
+# ***************************************** #
+# The following stages will configure       #
+# the terraform infrastructure              #
+# ***************************************** #
+
+init:
+  extends: .init
+  only:
+    - master
+
+validate:
+  extends: .validate
+  only:
+    - master
+  dependencies:
+    - init
+
+build:
+  extends: .build
+  only:
+    - master
+  dependencies:
+    - validate
+
+deploy:
+  extends: .deploy
+  when: on_success
+  only:
+    - master
+  dependencies:
+    - build
+
+
+# ***************************************** #
+# The following stages will build docker    #
+# image and push to aws ecr                 #
+# ***************************************** #
+prod-app-build:
+  stage: prod-app-build
+  image: docker:stable
+  services:
+    - docker:19.03-dind
+  before_script:
+    # install aws from python
+    - apk add --update --no-cache python3 py3-pip && pip3 install --upgrade pip && pip install --no-cache-dir --upgrade awscli
+  script:
+    # get aws account id
+    - AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
+    - echo $AWS_ACCOUNT_ID
+    # define docker image name
+    - DOCKER_IMAGE_NAME=server-${TF_VAR_tag_name}
+    # build docker image
+    - docker build --no-cache -t ${DOCKER_IMAGE_NAME} .
+    # check built image
+    - docker images --filter reference=${DOCKER_IMAGE_NAME}
+    # authenticate to aws ecr
+    - aws ecr get-login-password --region ${AWS_DEFAULT_REGION} | docker login --username AWS --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${DOCKER_IMAGE_NAME}
+    # Tag the image to push on aws ecr repository.
+    - docker tag ${DOCKER_IMAGE_NAME}:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${DOCKER_IMAGE_NAME}:latest
+    # Push the image
+    - docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${DOCKER_IMAGE_NAME}:latest
+  after_script: 
+    # terminate all aws ec2 instances to be re-created with updated images
+    - $(aws ec2 terminate-instances --instance-ids $(aws ec2 describe-instances | grep InstanceId | awk {'print $2'} | sed 's/[",]//g')) > /dev/null 2>&1 
+  when: on_success
+  only:
+    - master
+  dependencies:
+    - deploy

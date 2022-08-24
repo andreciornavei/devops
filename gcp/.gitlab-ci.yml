@@ -1,0 +1,80 @@
+variables:
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_DRIVER: overlay2
+  DOCKER_HOST: tcp://localhost:2375
+  CI_SLACK_CHANNEL: "produto-x-apps"
+  CI_RANCHER_NAMESPACE: "leadportal"
+  CI_RANCHER_WORKLOAD: "leadportal-cms"
+  CI_REGISTRY: $CI_REGISTRY
+  CI_RANCHER_URL: $CI_RANCHER_URL
+  CI_RANCHER_TOKEN: $CI_RANCHER_TOKEN
+  CI_SLACK_BOT_TOKEN: $CI_SLACK_BOT_TOKEN
+  CI_GCLOUD_SERVICE_KEY: $CI_GCLOUD_SERVICE_KEY
+
+workflow:
+  rules:
+    - if: $CI_COMMIT_BRANCH == "main"
+      variables:
+        ENVIRONMENT: "production"
+        CI_RANCHER_CONTEXT: $CI_RANCHER_CONTEXT_PRD
+    - if: $CI_COMMIT_BRANCH == "release"
+      variables:
+        ENVIRONMENT: "staging"
+        CI_RANCHER_CONTEXT: $CI_RANCHER_CONTEXT_STG
+
+before_script:
+  - export VERSION=${CI_COMMIT_SHA:0:8}-${CI_COMMIT_REF_SLUG}
+
+stages:
+  - build
+  - deploy
+
+build:
+  stage: build
+  image: docker:stable
+  services:
+    - docker:19.03-dind
+  environment:
+    name: $ENVIRONMENT
+  script:
+    - sh scripts/ci-install-dependencies.sh
+    - sh scripts/ci-slack-msg.sh "- [1/9] | Iniciando pipeline de *$ENVIRONMENT* do projeto *leadportal-cms*..."
+    - sh scripts/ci-slack-msg.sh "- [2/9] | Configurando Google Cloud Platform..."
+    - sh scripts/ci-setup-gcp.sh
+    - sh scripts/ci-slack-msg.sh "- [3/9] | Autenticando Docker no Registry do GCP..."
+    - sh scripts/ci-docker-login.sh
+    - sh scripts/ci-slack-msg.sh "- [4/9] | Construindo imagem do docker..."
+    - sh scripts/ci-docker-build.sh
+    - sh scripts/ci-slack-msg.sh "- [5/9] | Enviando imagem do docker para o GCP..."
+    - sh scripts/ci-docker-push.sh
+    - sh scripts/ci-slack-msg.sh "- [6/9] | Finalizando publicação da imagem no GCP..."
+  only:
+    - release
+    - main
+  tags: 
+    - k8s
+
+deploy:
+  stage: deploy
+  image: docker:stable
+  services:
+    - docker:19.03-dind
+  environment:
+    name: $ENVIRONMENT
+  script:
+    - echo $VERSION
+    - sh scripts/ci-rancher-install.sh
+    - sh scripts/ci-install-dependencies.sh
+    - sh scripts/ci-slack-msg.sh "- [7/9] | Autenticando no Rancher em contexto de *$ENVIRONMENT*..."
+    - sh scripts/ci-rancher-login.sh
+    - sh scripts/ci-slack-msg.sh "- [8/9] | Associando imagem do docker ao workload *$CI_RANCHER_WORKLOAD*..."
+    - sh scripts/ci-rancher-publish.sh
+    - sh scripts/ci-slack-msg.sh "- [9/9] | Nova versão do CMS do *Portal de Leads* *[$ENVIRONMENT]* disponível em $CI_ENVIRONMENT_URL."
+  when: on_success
+  only:
+    - release
+    - main
+  dependencies: 
+    - build
+  tags: 
+    - k8s

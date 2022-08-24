@@ -1,0 +1,10 @@
+variable "region" {}
+variable "app_id" {}
+variable "project_name" {}
+variable "tag_name" {}
+variable "domain" {}
+variable "database_password" {}
+variable "rds_instance_class" {}
+variable "ec2_instance_class" {}
+variable "email_from" {}
+variable "gitlab_access_token" {}
