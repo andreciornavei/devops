@@ -14,9 +14,12 @@ variables:
   TF_VAR_project_name: "Toro Sports"
   TF_VAR_rds_instance_class: "db.t3.medium"
   TF_VAR_ec2_instance_class: "t2.medium"
-  
+  BRANCH_MASTER: "master"
+  BRANCH_RELEASE: "release"
+
 stages:
-  - init
+  - build-staging
+  - deploy-staging
   - validate
   - build
   - deploy
@@ -25,33 +28,79 @@ stages:
 
 # ***************************************** #
 # The following stages will configure       #
+# the app on staging environment            #
+# ***************************************** #
+
+build-staging:
+  image: docker:stable
+  services:
+    - docker:19.03-dind
+  stage: build-staging
+  before_script:
+    - apk add --update make ca-certificates openssl
+    - apk add --no-cache curl jq git
+    - apk add --update --no-cache build-base python3-dev python3 libffi-dev
+    - curl -X POST -d "token=${SLACK_BOT_TOKEN}&channel=${SLACK_CHANNEL}&text=- *-------------------------------------*" ${SLACK_API_URL}
+    - curl -X POST -d "token=${SLACK_BOT_TOKEN}&channel=${SLACK_CHANNEL}&text=- *api do projeto toro-sports*..."  ${SLACK_API_URL}
+    - curl -X POST -d "token=${SLACK_BOT_TOKEN}&channel=${SLACK_CHANNEL}&text=- 1/3 | Iniciando build da imagem docker da *api do projeto toro-sports*..." ${SLACK_API_URL}
+    - VERSION=${CI_COMMIT_SHA:0:8}
+    - echo $VERSION
+    - update-ca-certificates
+    - echo $GCLOUD_SERVICE_KEY | base64 -d > ${HOME}/gcloud-service-key.json
+    - wget https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz
+    - tar zxvf google-cloud-sdk.tar.gz && ./google-cloud-sdk/install.sh --usage-reporting=false --path-update=true
+    - google-cloud-sdk/bin/gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
+    - google-cloud-sdk/bin/gcloud config list
+    - docker login -u oauth2accesstoken -p "$(google-cloud-sdk/bin/gcloud auth print-access-token)" gcr.io/xapps-software
+  script:
+    - docker build --pull -t gcr.io/xapps-software/toro-sports-api:$VERSION .
+    - docker push gcr.io/xapps-software/toro-sports-api:$VERSION
+    - curl -X POST -d "token=${SLACK_BOT_TOKEN}&channel=${SLACK_CHANNEL}&text=- 2/3 | Finalizando deploy da imagem do *api do projeto toro-sports* no GCP..." ${SLACK_API_URL}
+    - curl -X POST -d "token=${SLACK_BOT_TOKEN}&channel=${SLACK_CHANNEL}&text=- *-------------------------------------*" ${SLACK_API_URL}
+  rules:
+    - if: $CI_COMMIT_BRANCH == $BRANCH_RELEASE
+  dependencies: []
+
+deploy-staging:
+  image: andrebassi/rancher-kubectl:v1.17.3
+  services:
+    - docker:19.03-dind
+  stage: deploy-staging
+  before_script:
+    - VERSION=${CI_COMMIT_SHA:0:8}
+    - echo $VERSION
+    - rancher login https://rancher.staging-xapps.dev/ --token $RANCHER_TOKEN --context $RANCHER_PROJECTS_CONTEXT
+    - rancher context current
+    - rancher kubectl set image deployment/toro-sports-api toro-sports-api=gcr.io/xapps-software/toro-sports-api:$VERSION -n projetos --record
+  script:
+    - curl -X POST -d "token=${SLACK_BOT_TOKEN}&channel=${SLACK_CHANNEL}&text=- 3/3 | Finalizamos a publicação e disponibilizamos a última versão do projeto no *ambiente de staging da api do projeto toro-sports* em https://toro-sports-api.staging-xapps.dev/" ${SLACK_API_URL}
+    - curl -X POST -d "token=${SLACK_BOT_TOKEN}&channel=${SLACK_CHANNEL}&text=- *-------------------------------------*" ${SLACK_API_URL}
+  rules:
+    - if: $CI_COMMIT_BRANCH == $BRANCH_RELEASE
+  dependencies: ["build-staging"]
+
+# ***************************************** #
+# The following stages will configure       #
 # the terraform infrastructure              #
 # ***************************************** #
 
-init:
-  extends: .init
-  only:
-    - master
-
 validate:
-  extends: .validate
-  only:
-    - master
-  dependencies:
-    - init
+  extends: .terraform:validate
+  rules:
+    - if: $CI_COMMIT_BRANCH == $BRANCH_MASTER
 
 build:
-  extends: .build
-  only:
-    - master
+  extends: .terraform:build
+  rules:
+    - if: $CI_COMMIT_BRANCH == $BRANCH_MASTER
   dependencies:
     - validate
 
 deploy:
-  extends: .deploy
+  extends: .terraform:deploy
   when: on_success
-  only:
-    - master
+  rules:
+    - if: $CI_COMMIT_BRANCH == $BRANCH_MASTER
   dependencies:
     - build
 
@@ -84,11 +133,12 @@ prod-app-build:
     - docker tag ${DOCKER_IMAGE_NAME}:latest ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${DOCKER_IMAGE_NAME}:latest
     # Push the image
     - docker push ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/${DOCKER_IMAGE_NAME}:latest
-  after_script: 
+  after_script:
     # terminate all aws ec2 instances to be re-created with updated images
-    - $(aws ec2 terminate-instances --instance-ids $(aws ec2 describe-instances | grep InstanceId | awk {'print $2'} | sed 's/[",]//g')) > /dev/null 2>&1 
+    - $(aws ec2 terminate-instances --instance-ids $(aws ec2 describe-instances | grep InstanceId | awk {'print $2'} | sed 's/[",]//g')) > /dev/null 2>&1
   when: on_success
-  only:
-    - master
+  rules:
+    - if: $CI_COMMIT_BRANCH == $BRANCH_MASTER
   dependencies:
     - deploy
+
