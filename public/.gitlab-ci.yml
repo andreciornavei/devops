@@ -1,0 +1,14 @@
+include:
+  remote: 'https://gitlab.com/x-apps_admin/gitlab-ci-templates/-/raw/main/xapps-projetos.gitlab-ci.yml'
+
+stages:
+  - build
+  - deploy
+
+build:
+  stage: build
+  extends: .xapps:build
+
+deploy:
+  stage: deploy
+  extends: .xapps:deploy

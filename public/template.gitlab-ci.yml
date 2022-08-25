@@ -1,0 +1,107 @@
+variables:
+  DOCKER_TLS_CERTDIR: ""
+  # CI_SLACK_CHANNEL: //must to be defined on variables of .gitlab-ci.yml requester file
+  # CI_RANCHER_WORKLOAD: //must to be defined on variables of .gitlab-ci.yml requester file
+  # CI_RANCHER_CONTEXT: // must to be injected by group environment variables
+  # CI_RANCHER_NAMESPACE: // must to be injected by group environment variables
+  # CI_REGISTRY: // must to be injected by group environment variables
+  # CI_RANCHER_URL: // must to be injected by group environment variables
+  # CI_RANCHER_TOKEN: // must to be injected by group environment variables
+  # CI_SLACK_BOT_TOKEN: // must to be injected by group environment variables
+  # CI_GCLOUD_SERVICE_KEY: // must to be injected by group environment variables
+  SLACK_API_URL: https://slack.com/api/chat.postMessage
+  SLACK_API_AUTH: token=$CI_SLACK_BOT_TOKEN&channel=$CI_SLACK_CHANNEL&text
+  KUBE_LATEST_VERSION: v1.24.3
+  RANCHER_LATEST_VERSION: v2.6.6-rc4
+
+# THIS SCRIPT SHOULD RUN BEFORE EACH STAGE
+before_script:
+  # VALIDATE ALL REQUIRED VARIABLES
+  - function PROJECT_MSG { echo "- missing \$$1 in yours gitlab-ci.yml variables"; }
+  - function CONTEXT_MSG { echo "- missing \$$1 on gitlab workgroup environment variables (contact the gitlab account owner)"; }
+  - if [ -z $CI_SLACK_CHANNEL ]; then { set -- "$@" "$(PROJECT_MSG 'CI_SLACK_CHANNEL')"; } fi
+  - if [ -z $CI_RANCHER_WORKLOAD ]; then { set -- "$@" "$(PROJECT_MSG 'CI_RANCHER_WORKLOAD')"; } fi
+  - if [ -z $CI_REGISTRY ]; then { set -- "$@" "$(CONTEXT_MSG 'CI_REGISTRY')"; } fi
+  - if [ -z $CI_SLACK_BOT_TOKEN ]; then { set -- "$@" "$(CONTEXT_MSG 'CI_SLACK_BOT_TOKEN')"; } fi
+  - if [ -z $CI_GCLOUD_SERVICE_KEY ]; then { set -- "$@" "$(CONTEXT_MSG 'CI_GCLOUD_SERVICE_KEY')"; } fi
+  - if [ -z $CI_RANCHER_URL ]; then { set -- "$@" "$(CONTEXT_MSG 'CI_RANCHER_URL')"; } fi
+  - if [ -z $CI_RANCHER_TOKEN ]; then { set -- "$@" "$(CONTEXT_MSG 'CI_RANCHER_TOKEN')"; } fi
+  - if [ -z $CI_RANCHER_CONTEXT ]; then { set -- "$@" "$(CONTEXT_MSG 'CI_RANCHER_CONTEXT')"; } fi
+  - if [ -z $CI_RANCHER_NAMESPACE ]; then { set -- "$@" "$(CONTEXT_MSG 'CI_RANCHER_NAMESPACE')"; } fi
+  - if [ ${#@} -gt 0 ]; then { echo "<!-- VALIDATION ERRORS --->"; printf "%s\n" "$@"; exit 1; } fi
+  # DECLARE IMAGE VERSION
+  - export VERSION=${CI_COMMIT_SHA:0:8}-${CI_COMMIT_REF_SLUG}
+  - echo $VERSION
+  # DEFINE SLACK MSG FUNCTION
+  - function SLACK_MESSAGE { curl -X POST -d "${SLACK_API_AUTH}=$1" $SLACK_API_URL; }
+
+.xapps:build:
+  image: docker:stable
+  services:
+    - docker:19.03-dind
+  script:
+    # INSTALL DEPENDENCIES
+    - apk add --update --no-cache make ca-certificates openssl curl jq git build-base python3-dev python3 libffi-dev
+    - update-ca-certificates
+    # SEND MESSAGE #1 TO SLACK
+    - SLACK_MESSAGE "- [01/10] | Iniciando pipeline do projeto *${CI_RANCHER_WORKLOAD}*..."
+    # SEND MESSAGE #2 TO SLACK
+    - SLACK_MESSAGE "- [02/10] | Configurando Google Cloud Platform..."
+    # SETUP GOOGLE CLOUD PLATFORM
+    - echo $CI_GCLOUD_SERVICE_KEY | base64 -d > ${HOME}/gcloud-service-key.json
+    - wget https://dl.google.com/dl/cloudsdk/release/google-cloud-sdk.tar.gz
+    - tar zxvf google-cloud-sdk.tar.gz && ./google-cloud-sdk/install.sh --usage-reporting=false --path-update=true
+    - google-cloud-sdk/bin/gcloud auth activate-service-account --key-file ${HOME}/gcloud-service-key.json
+    - google-cloud-sdk/bin/gcloud config list
+    # SEND MESSAGE #3 TO SLACK
+    - SLACK_MESSAGE "- [03/10] | Autenticando Docker no Registry do GCP..."
+    # LOGIN TO GOOGLE CLOUD PLATFORM REGISTRY
+    - docker login -u oauth2accesstoken -p "$(google-cloud-sdk/bin/gcloud auth print-access-token)" $CI_REGISTRY
+    # SEND MESSAGE #4 TO SLACK
+    - SLACK_MESSAGE "- [04/10] | Construindo imagem do docker..."
+    # BUILD DOCKER IMAGE AND TAG IT WITH GOOGLE CLOUD PLATFORM REGISTRY
+    - docker build --pull -f Dockerfile -t $CI_REGISTRY/$CI_RANCHER_WORKLOAD:$VERSION .
+    # SEND MESSAGE #5 TO SLACK
+    - SLACK_MESSAGE "- [05/10] | Enviando imagem do docker para o GCP..."
+    # PUBLISH BUILT DOCKER IMAGE TO GOOGLE CLOUD PLATFORM REGISTRY
+    - docker push $CI_REGISTRY/$CI_RANCHER_WORKLOAD:$VERSION
+    # SEND MESSAGE #6 TO SLACK
+    - SLACK_MESSAGE "- [06/10] | Finalizando publicação da imagem no GCP..."
+  only:
+    - release
+    - main
+
+.xapps:deploy:
+  image: docker:stable
+  services:
+    - docker:19.03-dind
+  script:
+    # INSTALL DEPENDENCIES
+    - apk add --no-cache ca-certificates curl
+    - update-ca-certificates
+    # SEND MESSAGE #7 TO SLACK
+    - SLACK_MESSAGE "- [07/10] | Instalando dependencias do Rancher..."
+    # INSTALL KUBECTL
+    - wget -O /usr/bin/kubectl https://storage.googleapis.com/kubernetes-release/release/${KUBE_LATEST_VERSION}/bin/linux/amd64/kubectl
+    - chmod +x /usr/bin/kubectl
+    # INSTALL RANCHER
+    - wget https://github.com/rancher/cli/releases/download/${RANCHER_LATEST_VERSION}/rancher-linux-amd64-${RANCHER_LATEST_VERSION}.tar.gz
+    - tar -zxvf rancher-linux-amd64-${RANCHER_LATEST_VERSION}.tar.gz
+    - mv ./rancher-${RANCHER_LATEST_VERSION}/rancher /usr/bin
+    # SEND MESSAGE #8 TO SLACK
+    - SLACK_MESSAGE "- [08/10] | Autenticando no Rancher..."
+    # AUTH RANCHER
+    - rancher login $CI_RANCHER_URL --skip-verify --token $CI_RANCHER_TOKEN --context $CI_RANCHER_CONTEXT
+    - rancher context current
+    # SEND MESSAGE #9 TO SLACK
+    - SLACK_MESSAGE "- [09/10] | Associando imagem do docker ao workload *$CI_RANCHER_WORKLOAD*..."
+    # PUBLISH IMAGE TO RANCHER
+    - rancher kubectl set image deployment/$CI_RANCHER_WORKLOAD $CI_RANCHER_WORKLOAD=$CI_REGISTRY/$CI_RANCHER_WORKLOAD:$VERSION -n $CI_RANCHER_NAMESPACE --record --insecure-skip-tls-verify=true
+    # SEND MESSAGE #10 TO SLACK
+    - SLACK_MESSAGE "- [10/10] | Nova versão do projeto *${CI_RANCHER_WORKLOAD}* disponível."
+  when: on_success
+  only:
+    - release
+    - main
+  dependencies: 
+    - build
