@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    cloud.google.com/neg: '{"ingress":true}'
+    external-dns.alpha.kubernetes.io/hostname: mysql-sso.staging-dev.stream
+    field.cattle.io/publicEndpoints: '[{"addresses":["34.75.16.249"],"port":3306,"protocol":"TCP","serviceName":"x-apps-sso:mysql-sso","allNodes":false}]'
+    kubectl.kubernetes.io/last-applied-configuration: |
+      {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{"external-dns.alpha.kubernetes.io/hostname":"mysql-sso.staging-dev.stream"},"labels":{"app":"mysql-sso"},"name":"mysql-sso","namespace":"x-apps-sso"},"spec":{"ports":[{"port":3306}],"selector":{"app":"mysql-sso","tier":"mysql"},"type":"LoadBalancer"}}
+  creationTimestamp: "2022-05-23T13:25:06Z"
+  finalizers:
+  - service.kubernetes.io/load-balancer-cleanup
+  labels:
+    app: mysql-sso
+  managedFields:
+  - apiVersion: v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:external-dns.alpha.kubernetes.io/hostname: {}
+          f:kubectl.kubernetes.io/last-applied-configuration: {}
+        f:labels:
+          .: {}
+          f:app: {}
+      f:spec:
+        f:externalTrafficPolicy: {}
+        f:ports:
+          .: {}
+          k:{"port":3306,"protocol":"TCP"}:
+            .: {}
+            f:port: {}
+            f:protocol: {}
+            f:targetPort: {}
+        f:selector: {}
+        f:sessionAffinity: {}
+        f:type: {}
+    manager: kubectl-client-side-apply
+    operation: Update
+    time: "2022-05-23T13:25:06Z"
+  - apiVersion: v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:finalizers:
+          .: {}
+          v:"service.kubernetes.io/load-balancer-cleanup": {}
+      f:status:
+        f:loadBalancer:
+          f:ingress: {}
+    manager: kube-controller-manager
+    operation: Update
+    time: "2022-05-23T13:25:34Z"
+  - apiVersion: v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          f:field.cattle.io/publicEndpoints: {}
+    manager: rancher
+    operation: Update
+    time: "2022-05-23T13:25:34Z"
+  name: mysql-sso
+  namespace: x-apps-sso
+  resourceVersion: "444448310"
+  uid: 2d3416dd-d5f3-44f6-b2a6-6ccb47fad333
+spec:
+  allocateLoadBalancerNodePorts: true
+  clusterIP: 10.176.12.246
+  clusterIPs:
+  - 10.176.12.246
+  externalTrafficPolicy: Cluster
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+  - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+  - nodePort: 31235
+    port: 3306
+    protocol: TCP
+    targetPort: 3306
+  selector:
+    app: mysql-sso
+    tier: mysql
+  sessionAffinity: None
+  type: LoadBalancer
+status:
+  loadBalancer:
+    ingress:
+    - ip: 34.75.16.249

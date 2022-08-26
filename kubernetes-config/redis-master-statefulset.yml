@@ -1,0 +1,415 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations:
+    field.cattle.io/publicEndpoints: '[{"addresses":["34.73.252.165"],"port":6379,"protocol":"TCP","serviceName":"chat-back-end:redis-master","allNodes":false}]'
+    meta.helm.sh/release-name: redis
+    meta.helm.sh/release-namespace: chat-back-end
+  creationTimestamp: "2021-06-23T18:36:07Z"
+  generation: 3
+  labels:
+    app.kubernetes.io/component: master
+    app.kubernetes.io/instance: redis
+    app.kubernetes.io/managed-by: Helm
+    app.kubernetes.io/name: redis
+    helm.sh/chart: redis-14.6.1
+  managedFields:
+  - apiVersion: apps/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          .: {}
+          f:meta.helm.sh/release-name: {}
+          f:meta.helm.sh/release-namespace: {}
+        f:labels:
+          .: {}
+          f:app.kubernetes.io/component: {}
+          f:app.kubernetes.io/instance: {}
+          f:app.kubernetes.io/managed-by: {}
+          f:app.kubernetes.io/name: {}
+          f:helm.sh/chart: {}
+      f:spec:
+        f:podManagementPolicy: {}
+        f:replicas: {}
+        f:revisionHistoryLimit: {}
+        f:selector: {}
+        f:serviceName: {}
+        f:template:
+          f:metadata:
+            f:annotations:
+              .: {}
+              f:checksum/configmap: {}
+              f:checksum/health: {}
+              f:checksum/scripts: {}
+              f:checksum/secret: {}
+            f:labels:
+              .: {}
+              f:app.kubernetes.io/component: {}
+              f:app.kubernetes.io/instance: {}
+              f:app.kubernetes.io/managed-by: {}
+              f:app.kubernetes.io/name: {}
+              f:helm.sh/chart: {}
+          f:spec:
+            f:affinity:
+              .: {}
+              f:podAntiAffinity:
+                .: {}
+                f:preferredDuringSchedulingIgnoredDuringExecution: {}
+            f:containers:
+              k:{"name":"redis"}:
+                .: {}
+                f:args: {}
+                f:command: {}
+                f:env:
+                  .: {}
+                  k:{"name":"ALLOW_EMPTY_PASSWORD"}:
+                    .: {}
+                    f:name: {}
+                    f:value: {}
+                  k:{"name":"BITNAMI_DEBUG"}:
+                    .: {}
+                    f:name: {}
+                    f:value: {}
+                  k:{"name":"REDIS_PASSWORD"}:
+                    .: {}
+                    f:name: {}
+                    f:valueFrom:
+                      .: {}
+                      f:secretKeyRef: {}
+                  k:{"name":"REDIS_PORT"}:
+                    .: {}
+                    f:name: {}
+                    f:value: {}
+                  k:{"name":"REDIS_REPLICATION_MODE"}:
+                    .: {}
+                    f:name: {}
+                    f:value: {}
+                  k:{"name":"REDIS_TLS_ENABLED"}:
+                    .: {}
+                    f:name: {}
+                    f:value: {}
+                f:image: {}
+                f:imagePullPolicy: {}
+                f:livenessProbe:
+                  .: {}
+                  f:exec:
+                    .: {}
+                    f:command: {}
+                  f:failureThreshold: {}
+                  f:initialDelaySeconds: {}
+                  f:periodSeconds: {}
+                  f:successThreshold: {}
+                  f:timeoutSeconds: {}
+                f:name: {}
+                f:ports:
+                  .: {}
+                  k:{"containerPort":6379,"protocol":"TCP"}:
+                    .: {}
+                    f:containerPort: {}
+                    f:name: {}
+                    f:protocol: {}
+                f:readinessProbe:
+                  .: {}
+                  f:exec:
+                    .: {}
+                    f:command: {}
+                  f:failureThreshold: {}
+                  f:initialDelaySeconds: {}
+                  f:periodSeconds: {}
+                  f:successThreshold: {}
+                  f:timeoutSeconds: {}
+                f:resources: {}
+                f:securityContext:
+                  .: {}
+                  f:runAsUser: {}
+                f:terminationMessagePath: {}
+                f:terminationMessagePolicy: {}
+                f:volumeMounts:
+                  .: {}
+                  k:{"mountPath":"/data"}:
+                    .: {}
+                    f:mountPath: {}
+                    f:name: {}
+                  k:{"mountPath":"/health"}:
+                    .: {}
+                    f:mountPath: {}
+                    f:name: {}
+                  k:{"mountPath":"/opt/bitnami/redis/etc/"}:
+                    .: {}
+                    f:mountPath: {}
+                    f:name: {}
+                  k:{"mountPath":"/opt/bitnami/redis/mounted-etc"}:
+                    .: {}
+                    f:mountPath: {}
+                    f:name: {}
+                  k:{"mountPath":"/opt/bitnami/scripts/start-scripts"}:
+                    .: {}
+                    f:mountPath: {}
+                    f:name: {}
+                  k:{"mountPath":"/tmp"}:
+                    .: {}
+                    f:mountPath: {}
+                    f:name: {}
+            f:dnsPolicy: {}
+            f:restartPolicy: {}
+            f:schedulerName: {}
+            f:securityContext:
+              .: {}
+              f:fsGroup: {}
+            f:serviceAccount: {}
+            f:serviceAccountName: {}
+            f:terminationGracePeriodSeconds: {}
+            f:volumes:
+              .: {}
+              k:{"name":"config"}:
+                .: {}
+                f:configMap:
+                  .: {}
+                  f:defaultMode: {}
+                  f:name: {}
+                f:name: {}
+              k:{"name":"health"}:
+                .: {}
+                f:configMap:
+                  .: {}
+                  f:defaultMode: {}
+                  f:name: {}
+                f:name: {}
+              k:{"name":"redis-tmp-conf"}:
+                .: {}
+                f:emptyDir: {}
+                f:name: {}
+              k:{"name":"start-scripts"}:
+                .: {}
+                f:configMap:
+                  .: {}
+                  f:defaultMode: {}
+                  f:name: {}
+                f:name: {}
+              k:{"name":"tmp"}:
+                .: {}
+                f:emptyDir: {}
+                f:name: {}
+        f:updateStrategy:
+          f:rollingUpdate:
+            .: {}
+            f:partition: {}
+          f:type: {}
+        f:volumeClaimTemplates: {}
+    manager: Go-http-client
+    operation: Update
+    time: "2021-06-23T18:36:07Z"
+  - apiVersion: apps/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:metadata:
+        f:annotations:
+          f:field.cattle.io/publicEndpoints: {}
+      f:spec:
+        f:template:
+          f:metadata:
+            f:annotations:
+              f:cattle.io/timestamp: {}
+              f:field.cattle.io/ports: {}
+              f:field.cattle.io/publicEndpoints: {}
+    manager: rancher
+    operation: Update
+    time: "2022-02-22T20:53:28Z"
+  - apiVersion: apps/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        f:collisionCount: {}
+        f:currentRevision: {}
+        f:observedGeneration: {}
+        f:replicas: {}
+        f:updateRevision: {}
+    manager: kube-controller-manager
+    operation: Update
+    time: "2022-08-04T12:31:16Z"
+  - apiVersion: apps/v1
+    fieldsType: FieldsV1
+    fieldsV1:
+      f:status:
+        f:availableReplicas: {}
+        f:currentReplicas: {}
+        f:readyReplicas: {}
+        f:updatedReplicas: {}
+    manager: kube-controller-manager
+    operation: Update
+    subresource: status
+    time: "2022-08-26T10:29:35Z"
+  name: redis-master
+  namespace: chat-back-end
+  resourceVersion: "454265483"
+  uid: 0ba4c46e-3760-4212-abb8-c54df5ed98f1
+spec:
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: master
+      app.kubernetes.io/instance: redis
+      app.kubernetes.io/name: redis
+  serviceName: redis-headless
+  template:
+    metadata:
+      annotations:
+        cattle.io/timestamp: "2022-03-12T19:45:30Z"
+        checksum/configmap: 1b3a7184d6ca4e342d2fd689d1b8d404231b6a404703060b608713c212a49dbc
+        checksum/health: 291fb00b4d3172ad6104e06246e7a85f51c70fd50817845eaf2df51ce6c7175e
+        checksum/scripts: e112bd9f9e0a2adb38f5e6e8e94694628f87bb519f6c35eb0ba171c9ad07178b
+        checksum/secret: 49940130dcbb9a97797a3725601609da1f836a0b59f8f0e8d12c87101522e663
+        field.cattle.io/ports: '[[{"containerPort":6379,"dnsName":"redis-master","kind":"ClusterIP","name":"redis","protocol":"TCP"}]]'
+        field.cattle.io/publicEndpoints: '[{"addresses":["34.73.252.165"],"port":6379,"protocol":"TCP","serviceId":"chat-back-end:redis-master"}]'
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/component: master
+        app.kubernetes.io/instance: redis
+        app.kubernetes.io/managed-by: Helm
+        app.kubernetes.io/name: redis
+        helm.sh/chart: redis-14.6.1
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - podAffinityTerm:
+              labelSelector:
+                matchLabels:
+                  app.kubernetes.io/component: master
+                  app.kubernetes.io/instance: redis
+                  app.kubernetes.io/name: redis
+              namespaces:
+              - chat-back-end
+              topologyKey: kubernetes.io/hostname
+            weight: 1
+      containers:
+      - args:
+        - -c
+        - /opt/bitnami/scripts/start-scripts/start-master.sh
+        command:
+        - /bin/bash
+        env:
+        - name: ALLOW_EMPTY_PASSWORD
+          value: "no"
+        - name: BITNAMI_DEBUG
+          value: "false"
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_REPLICATION_MODE
+          value: master
+        - name: REDIS_TLS_ENABLED
+          value: "no"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: redis-password
+              name: redis
+        image: docker.io/bitnami/redis:6.2.4-debian-10-r11
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - /health/ping_liveness_local.sh 5
+          failureThreshold: 5
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 6
+        name: redis
+        ports:
+        - containerPort: 6379
+          name: redis
+          protocol: TCP
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - /health/ping_readiness_local.sh 1
+          failureThreshold: 5
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          successThreshold: 1
+          timeoutSeconds: 2
+        resources: {}
+        securityContext:
+          runAsUser: 1001
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+        - mountPath: /opt/bitnami/scripts/start-scripts
+          name: start-scripts
+        - mountPath: /health
+          name: health
+        - mountPath: /data
+          name: redis-data
+        - mountPath: /opt/bitnami/redis/mounted-etc
+          name: config
+        - mountPath: /opt/bitnami/redis/etc/
+          name: redis-tmp-conf
+        - mountPath: /tmp
+          name: tmp
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext:
+        fsGroup: 1001
+      serviceAccount: redis
+      serviceAccountName: redis
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - configMap:
+          defaultMode: 493
+          name: redis-scripts
+        name: start-scripts
+      - configMap:
+          defaultMode: 493
+          name: redis-health
+        name: health
+      - configMap:
+          defaultMode: 420
+          name: redis-configuration
+        name: config
+      - emptyDir: {}
+        name: redis-tmp-conf
+      - emptyDir: {}
+        name: tmp
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate
+  volumeClaimTemplates:
+  - apiVersion: v1
+    kind: PersistentVolumeClaim
+    metadata:
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/component: master
+        app.kubernetes.io/instance: redis
+        app.kubernetes.io/name: redis
+      name: redis-data
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 5Gi
+      storageClassName: standard
+      volumeMode: Filesystem
+    status:
+      phase: Pending
+status:
+  availableReplicas: 1
+  collisionCount: 0
+  currentReplicas: 1
+  currentRevision: redis-master-6b4df764b8
+  observedGeneration: 3
+  readyReplicas: 1
+  replicas: 1
+  updateRevision: redis-master-6b4df764b8
+  updatedReplicas: 1
